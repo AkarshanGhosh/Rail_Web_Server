@@ -2,11 +2,15 @@ const express = require('express');
 const app = express();
 require("dotenv").config();
 require("./conn/conn");
+const cors = require("cors")
+
 const auth = require("./routes/authRoute.js");
 const user = require("./routes/UserRoute.js"); 
 const divisionRouter = require('./routes/divisionRoute.js');
 const trainRouter = require('./routes/trainRoute.js');
 
+//cors
+app.use(cors());
 // Use express.json() to parse incoming JSON requests
 app.use(express.json());
 

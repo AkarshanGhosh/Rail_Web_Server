@@ -6,8 +6,8 @@ const trainRouter = express.Router();
 //Routes
 
 trainRouter.post('/add-coach-data', addTrainDetails)
-trainRouter.get('/get-coach-data', getTrainDetails)
-trainRouter.get('/get-coach', getAvailableCoaches)
+trainRouter.post('/get-coach-data', getTrainDetails)
+trainRouter.post('/get-coach', getAvailableCoaches)
 
 
 module.exports = trainRouter;

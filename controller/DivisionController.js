@@ -138,3 +138,36 @@ module.exports.getRecentlyAddedDivisions = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+
+
+// Get Division by ID
+module.exports.getDivisionById = async (req, res) => {
+    try {
+        // Extract the division ID from the request parameters
+        const { id } = req.params;
+
+        // Validate the ID
+        if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid Division ID" });
+        }
+
+        // Find the division by ID
+        const division = await Division.findById(id);
+
+        // Check if the division exists
+        if (!division) {
+            return res.status(404).json({ message: "Division not found" });
+        }
+
+        // Return the division
+        return res.json({
+            status: "Success",
+            data: division,
+        });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};
+
+

@@ -5,7 +5,7 @@ require("./conn/conn");
 const cors = require("cors")
 
 const auth = require("./routes/authRoute.js");
-const user = require("./routes/UserRoute.js"); 
+const user = require("./routes/userRoute.js"); 
 const divisionRouter = require('./routes/divisionRoute.js');
 const trainRouter = require('./routes/trainRoute.js');
 

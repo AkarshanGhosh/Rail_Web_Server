@@ -120,28 +120,37 @@ module.exports.addTrainDetails = async (req, res) => {
 // Fetch train details by train_number and coach
 module.exports.getTrainDetails = async (req, res) => {
     try {
-        const { train_Number, coach } = req.body; // Fetch train_number and coach from query parameters
-        console.log(train_Number, coach)
+        // Extract train_Number and coach from the URL query parameters
+        const { train_Number, coach } = req.query; 
+        console.log("Train Number:", train_Number, "Coach:", coach);
 
         // Validate input
         if (!train_Number || !coach) {
             return res.status(400).json({ message: "Train number and coach are required." });
         }
 
-        // Find the train details based on train_number and coach
+        // Find the train details based on train_Number and coach
         const train = await Train.find({ train_Number, coach });
 
-        if (!train) {
+        // Check if train details are found
+        if (train.length === 0) {
             return res.status(404).json({ message: "Train details not found for the given train number and coach." });
         }
 
         // Return the found train details
-        res.status(200).json({ message: "Train details fetched successfully!", train });
+        res.status(200).json({ 
+            message: "Train details fetched successfully!", 
+            train 
+        });
     } catch (error) {
         console.error("Error fetching train details:", error);
-        res.status(500).json({ message: "An error occurred while fetching train details", error: error.message });
+        res.status(500).json({ 
+            message: "An error occurred while fetching train details", 
+            error: error.message 
+        });
     }
 };
+
 // Fetch available coaches under the train name or train number
 module.exports.getAvailableCoaches = async (req, res) => {
     try {

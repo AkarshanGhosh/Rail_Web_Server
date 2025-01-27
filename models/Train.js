@@ -11,8 +11,12 @@ const trainSchema = new mongoose.Schema({
         required: true,
     },
     date: {
-        type: Date,
-        default: Date.now,
+        type: String,
+        
+    },
+    time: {
+        type: String,
+        
     },
     latitude: {
         type: String,
@@ -34,17 +38,17 @@ const trainSchema = new mongoose.Schema({
     },
     error: { 
         type: String,
-        required: true,
+        
         default: "000",
     },
     memory: {
         type: String,
-        required: true,
+        
         default: "Not available",
     },
     humidity: {
         type: String,
-        required: true,
+        
         default: "Not available",
     },
 });

@@ -14,11 +14,11 @@ const divisionSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
-        train_Name: {
+        train_name: {
             type: String,
             required: true,
         },
-        train_Number: {
+        train_number: {
             type: String,
             required: true,
         },

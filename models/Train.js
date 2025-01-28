@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const trainSchema = new mongoose.Schema({
-    train_number: {
+    train_Number: {
         type: String,
         ref: "Division", // Reference to the Division schema
         required: true,

@@ -22,7 +22,7 @@ const sendChainStatusEmail = async (train) => {
                 from: process.env.SENDER_EMAIL, // Sender's email address (configured in .env)
                 to: email, // Send to one user at a time
                 subject: "Chain Pulled Notification", // Subject of the email
-                text: `Alert! The chain status of train "${train.train_number}" (Coach: ${train.coach}) has been updated to "Pulled". Please take necessary actions immediately.`, // Email body
+                text: `Alert! The chain status of train "${train.train_Number}" (Coach: ${train.coach}) has been updated to "Pulled". Please take necessary actions immediately.`, // Email body
             };
             //console.log(mailOptions)
 
@@ -37,10 +37,10 @@ const sendChainStatusEmail = async (train) => {
 // Add data 
 module.exports.addTrainDetails = async (req, res) => {
     try {
-        const { train_number, coach, chain_status, latitude, longitude, temperature, error, memory, humidity } = req.body;
+        const { train_Number, coach, chain_status, latitude, longitude, temperature, error, memory, humidity } = req.body;
 
         // Check if the train number exists in the Division model
-        const divisionExists = await Division.findOne({ train_number });
+        const divisionExists = await Division.findOne({ train_Number });
 
         if (!divisionExists) {
             return res.status(400).json({ message: "Train number does not exist in Division." });
@@ -48,7 +48,7 @@ module.exports.addTrainDetails = async (req, res) => {
 
         // Create a new train entry
         const newTrain = new Train({
-            train_number,
+            train_Number,
             coach,
             chain_status,
             latitude,
@@ -79,10 +79,10 @@ module.exports.addTrainDetails = async (req, res) => {
 // Add train details
 module.exports.addTrainDetails = async (req, res) => {
     try {
-        const { train_number, coach, chain_status, latitude, longitude, temperature, error, memory, humidity } = req.body;
+        const { train_Number, coach, chain_status, latitude, longitude, temperature, error, memory, humidity } = req.body;
 
         // Check if the train number exists in the Division model
-        const divisionExists = await Division.findOne({ train_number });
+        const divisionExists = await Division.findOne({ train_Number });
 
         if (!divisionExists) {
             return res.status(400).json({ message: "Train number does not exist in Division." });
@@ -90,7 +90,7 @@ module.exports.addTrainDetails = async (req, res) => {
 
         // Create a new train entry
         const newTrain = new Train({
-            train_number,
+            train_Number,
             coach,
             chain_status,
             latitude,
@@ -117,20 +117,20 @@ module.exports.addTrainDetails = async (req, res) => {
 };
 
 
-// Fetch train details by train_number and coach
+// Fetch train details by train_Number and coach
 module.exports.getTrainDetails = async (req, res) => {
     try {
-        // Extract train_number and coach from the URL query parameters
-        const { train_number, coach } = req.query; 
-        console.log("Train Number:", train_number, "Coach:", coach);
+        // Extract train_Number and coach from the URL query parameters
+        const { train_Number, coach } = req.query; 
+        console.log("Train Number:", train_Number, "Coach:", coach);
 
         // Validate input
-        if (!train_number || !coach) {
+        if (!train_Number || !coach) {
             return res.status(400).json({ message: "Train number and coach are required." });
         }
 
-        // Find the train details based on train_number and coach
-        const train = await Train.find({ train_number, coach });
+        // Find the train details based on train_Number and coach
+        const train = await Train.find({ train_Number, coach });
 
         // Check if train details are found
         if (train.length === 0) {
@@ -154,20 +154,20 @@ module.exports.getTrainDetails = async (req, res) => {
 // Fetch available coaches under the train name or train number
 module.exports.getAvailableCoaches = async (req, res) => {
     try {
-        const { train_Name, train_number } = req.body; 
+        const { train_Name, train_Number } = req.body; 
 
         // Validate input
-        if (!train_Name && !train_number) {
+        if (!train_Name && !train_Number) {
             return res.status(400).json({ message: "Either train name or train number is required." });
         }
 
-        // Build the query to fetch coaches based on train_Name or train_number
+        // Build the query to fetch coaches based on train_Name or train_Number
         const query = {};
         if (train_Name) {
             query.train_Name = train_Name;
         }
-        if (train_number) {
-            query.train_number = train_number;
+        if (train_Number) {
+            query.train_Number = train_Number;
         }
 
         // Find the trains based on the query

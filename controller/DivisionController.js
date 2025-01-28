@@ -26,7 +26,7 @@ module.exports.addDivision = async (req, res) => {
             return res.status(403).json({ message: "You are not authorized to add divisions" });
         }
 
-        const { division, states, cities, train_Name, train_number } = req.body;
+        const { division, states, cities, train_Name, train_Number } = req.body;
 
         // Check if division with the same data already exists
         const existingDivision = await Division.findOne({
@@ -34,14 +34,14 @@ module.exports.addDivision = async (req, res) => {
             states,
             cities,
             train_Name,
-            train_number,
+            train_Number,
         });
 
         if (existingDivision) {
             return res.status(400).json({ message: "Data already exists" });
         }
 
-        if (!division || !states || !cities || !train_Name || !train_number) {
+        if (!division || !states || !cities || !train_Name || !train_Number) {
             return res.status(400).json({ message: "All fields are required" });
         }
 
@@ -50,7 +50,7 @@ module.exports.addDivision = async (req, res) => {
             states,     // Matches the schema field name
             cities,     // Matches the schema field name
             train_Name, // Matches the schema field name
-            train_number, // Matches the schema field name
+            train_Number, // Matches the schema field name
         });
 
         await newDivision.save();

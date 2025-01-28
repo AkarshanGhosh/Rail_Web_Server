@@ -18,7 +18,7 @@ const divisionSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
-        train_number: {
+        train_Number: {
             type: String,
             required: true,
         },

@@ -37,7 +37,7 @@ const sendChainStatusEmail = async (train) => {
 // Add data 
 module.exports.addTrainDetails = async (req, res) => {
     try {
-        const { train_Number, coach, chain_status, latitude, longitude, temperature, error, memory, humidity } = req.body;
+        const { train_Number, coach, chain_status, latitude, longitude, temperature, error, memory, humidity, date, time  } = req.body;
 
         // Check if the train number exists in the Division model
         const divisionExists = await Division.findOne({ train_Number });
@@ -57,6 +57,8 @@ module.exports.addTrainDetails = async (req, res) => {
             error,
             memory,
             humidity,
+            date,
+            time
         });
 
         // Save the train
@@ -79,7 +81,7 @@ module.exports.addTrainDetails = async (req, res) => {
 // Add train details
 module.exports.addTrainDetails = async (req, res) => {
     try {
-        const { train_Number, coach, chain_status, latitude, longitude, temperature, error, memory, humidity } = req.body;
+        const { train_Number, coach, chain_status, latitude, longitude, temperature, error, memory, humidity, date, time } = req.body;
 
         // Check if the train number exists in the Division model
         const divisionExists = await Division.findOne({ train_Number });
@@ -99,6 +101,8 @@ module.exports.addTrainDetails = async (req, res) => {
             error,
             memory,
             humidity,
+            date,
+            time
         });
 
         // Save the train details

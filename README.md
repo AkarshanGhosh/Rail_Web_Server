@@ -27,3 +27,8 @@ This project serves as the backend for a railway management system, providing AP
 1. Clone the repository:
    ```bash
    git clone https://github.com/AkarshanGhosh/Rail_Web_Server.git
+
+### Notes:
+ **© 2025 Akarshan Ghosh. All rights reserved.**
+
+   

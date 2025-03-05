@@ -14,11 +14,11 @@ const divisionSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
-        train_name: {
+        train_name: { // ✅ FIXED: Ensure this matches exactly with request body
             type: String,
             required: true,
         },
-        train_Number: {
+        train_number: { // ✅ FIXED: Use lowercase "train_number" for consistency
             type: String,
             required: true,
         },

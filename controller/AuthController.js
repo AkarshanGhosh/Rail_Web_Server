@@ -41,7 +41,7 @@ module.exports.register = async (req, res) => {
         const mailOptions = {
             from: process.env.SENDER_EMAIL,
             to: email,
-            subject: `Welcome to E-book, ${role === "admin" ? "Admin" : "User"}!`,
+            subject: `Welcome to Rail Watch, ${role === "admin" ? "Admin" : "User"}!`,
             text: `Hello ${username},\n\nWelcome to Rail Watch You have successfully registered with the email: ${email}.\n\nBest Regards,\nTIH Teams`,
         };
 

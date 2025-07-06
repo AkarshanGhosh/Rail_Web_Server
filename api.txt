@@ -22,6 +22,8 @@ POST http://localhost:1000/api/auth/admin/verify-otp – Verify OTP and complete
 
 GET http://localhost:1000/api/auth/admin/data – Get admin data (header: id)
 
+send email post http://localhost:1000/api/auth/admin/send-mail
+
 🗂️ DIVISION APIs
 POST http://localhost:1000/api/division/add-division – Add a new division (admin only)
 

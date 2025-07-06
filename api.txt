@@ -1,0 +1,45 @@
+🔐 AUTH APIs
+POST http://localhost:1000/api/auth/register – Register a new user
+
+POST http://localhost:1000/api/auth/login – Login using email or phone number
+
+POST http://localhost:1000/api/auth/logout – Logout user and clear token cookie
+
+POST http://localhost:1000/api/auth/forgot-password – Send OTP to user's email
+
+POST http://localhost:1000/api/auth/reset-password – Reset password using OTP
+
+POST http://localhost:1000/api/auth/verify-email – Verify email using OTP
+
+GET http://localhost:1000/api/auth/getuserbyid – Get logged-in user info (JWT required)
+
+POST http://localhost:1000/api/auth/is-auth – Check if user is authenticated (JWT required)
+
+🧑‍💼 ADMIN APIs (via OTP)
+POST http://localhost:1000/api/auth/admin/login – Admin login (generate OTP)
+
+POST http://localhost:1000/api/auth/admin/verify-otp – Verify OTP and complete admin login
+
+GET http://localhost:1000/api/auth/admin/data – Get admin data (header: id)
+
+🗂️ DIVISION APIs
+POST http://localhost:1000/api/division/add-division – Add a new division (admin only)
+
+POST http://localhost:1000/api/division/delete-division – Delete division (header: division-id, admin only)
+
+GET http://localhost:1000/api/division/get-all-division – Get all divisions
+
+GET http://localhost:1000/api/division/recent-division – Get 4 most recent divisions
+
+GET http://localhost:1000/api/division/division-id/:id – Get a division by MongoDB _id
+
+🚆 TRAIN & COACH APIs
+POST http://localhost:1000/api/coach/add-coach-data – Add train/coach data with sensor readings
+
+GET http://localhost:1000/api/coach/get-coach-data?train_Number=12627&coach=S1 – Fetch train details by number and coach
+
+POST http://localhost:1000/api/coach/get-coach – Get available coaches for a train (by name or number)
+
+👤 USER APIs
+GET http://localhost:1000/api/user/data – Get authenticated user profile (JWT required)
+

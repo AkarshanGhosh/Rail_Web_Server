@@ -9,8 +9,17 @@ const user = require("./routes/userRoute.js");
 const divisionRouter = require('./routes/divisionRoute.js');
 const trainRouter = require('./routes/trainRoute.js');
 
+// CORS Configuration - Fix for credentials: 'include'
+const corsOptions = {
+  origin: '*', // Your frontend URL
+  credentials: true, // Allow credentials (cookies, authorization headers)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Routes

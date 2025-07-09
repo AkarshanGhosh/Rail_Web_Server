@@ -4,29 +4,51 @@ const app = express();
 // ✅ Load environment variables first
 require("dotenv").config();
 
-// ✅ Database connection with error handling
+const cors = require("cors");
+
+// ✅ Robust database connection with retries
 const connectDB = async () => {
-  try {
-    await require("./conn/conn");
-    console.log("✅ Database connected successfully");
-  } catch (error) {
-    console.error("❌ Database connection failed:", error.message);
-    process.exit(1);
+  const maxRetries = 5;
+  let retryCount = 0;
+
+  while (retryCount < maxRetries) {
+    try {
+      console.log(`🔄 Attempting database connection (attempt ${retryCount + 1}/${maxRetries})`);
+      await require("./conn/conn");
+      console.log("✅ Database connected successfully");
+      return;
+    } catch (error) {
+      retryCount++;
+      console.error(`❌ Database connection failed (attempt ${retryCount}/${maxRetries}):`, error.message);
+      
+      if (retryCount === maxRetries) {
+        console.error("💥 Max database connection retries reached. Exiting...");
+        process.exit(1);
+      }
+      
+      // Wait before retry (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+    }
   }
 };
 
-const cors = require("cors");
+// Import routes with error handling
+let auth, user, divisionRouter, trainRouter;
+try {
+  auth = require("./routes/authRoute.js");
+  user = require("./routes/userRoute.js");
+  divisionRouter = require('./routes/divisionRoute.js');
+  trainRouter = require('./routes/trainRoute.js');
+  console.log("✅ All routes loaded successfully");
+} catch (error) {
+  console.error("❌ Route loading failed:", error.message);
+  process.exit(1);
+}
 
-// Import routes
-const auth = require("./routes/authRoute.js");
-const user = require("./routes/userRoute.js");
-const divisionRouter = require('./routes/divisionRoute.js');
-const trainRouter = require('./routes/trainRoute.js');
-
-// ✅ CORS Configuration - optimized for production
+// ✅ CORS Configuration
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || '*' 
+    ? (process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : '*')
     : '*',
   credentials: false,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -34,52 +56,111 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 
-// ✅ Middleware
+// ✅ Middleware with error handling
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' })); // Add size limit
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ✅ Request logging middleware (helpful for debugging)
+// ✅ Request logging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
 
-// ✅ Health check endpoint (required for Render)
-app.get("/health", (req, res) => {
-  res.status(200).json({ 
-    status: "OK", 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
-  });
+// ✅ Enhanced health check with database test
+app.get("/health", async (req, res) => {
+  try {
+    // Test database connection
+    const dbConnection = require("./conn/conn");
+    
+    const healthInfo = {
+      status: "OK",
+      timestamp: new Date().toISOString(),
+      uptime: Math.floor(process.uptime()),
+      memory: {
+        rss: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB',
+        heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB'
+      },
+      database: "connected",
+      environment: process.env.NODE_ENV || 'development'
+    };
+    
+    res.status(200).json(healthInfo);
+  } catch (error) {
+    console.error("❌ Health check failed:", error.message);
+    res.status(503).json({
+      status: "ERROR",
+      timestamp: new Date().toISOString(),
+      database: "disconnected",
+      error: error.message
+    });
+  }
 });
 
-// ✅ Root endpoint
+// ✅ Root endpoint with service info
 app.get("/", (req, res) => {
-  res.status(200).json({ 
-    message: "API is running successfully",
+  res.status(200).json({
+    message: "🚂 Rail API is running successfully",
     version: "1.0.0",
-    endpoints: ["/api/auth", "/api/user", "/api/division", "/api/coach"]
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      auth: "/api/auth",
+      user: "/api/user", 
+      division: "/api/division",
+      coach: "/api/coach"
+    },
+    health: "/health"
   });
 });
 
-// ✅ API Routes
-app.use("/api/auth", auth);
-app.use("/api/user", user);
-app.use("/api/division", divisionRouter);
-app.use("/api/coach", trainRouter);
+// ✅ API Routes with error boundaries
+app.use("/api/auth", (req, res, next) => {
+  try {
+    auth(req, res, next);
+  } catch (error) {
+    console.error("❌ Auth route error:", error);
+    res.status(500).json({ error: "Auth service error" });
+  }
+});
 
-// ✅ 404 handler for undefined routes
+app.use("/api/user", (req, res, next) => {
+  try {
+    user(req, res, next);
+  } catch (error) {
+    console.error("❌ User route error:", error);
+    res.status(500).json({ error: "User service error" });
+  }
+});
+
+app.use("/api/division", (req, res, next) => {
+  try {
+    divisionRouter(req, res, next);
+  } catch (error) {
+    console.error("❌ Division route error:", error);
+    res.status(500).json({ error: "Division service error" });
+  }
+});
+
+app.use("/api/coach", (req, res, next) => {
+  try {
+    trainRouter(req, res, next);
+  } catch (error) {
+    console.error("❌ Coach route error:", error);
+    res.status(500).json({ error: "Coach service error" });
+  }
+});
+
+// ✅ 404 handler
 app.use("*", (req, res) => {
-  res.status(404).json({ 
+  res.status(404).json({
     error: "Route not found",
     path: req.originalUrl,
-    method: req.method 
+    method: req.method,
+    availableRoutes: ["/", "/health", "/api/auth", "/api/user", "/api/division", "/api/coach"]
   });
 });
 
-// ✅ Global error handler (must be last middleware)
+// ✅ Global error handler
 app.use((err, req, res, next) => {
   console.error("❌ Uncaught Error:", {
     message: err.message,
@@ -88,60 +169,91 @@ app.use((err, req, res, next) => {
     method: req.method,
     timestamp: new Date().toISOString()
   });
-  
-  res.status(err.status || 500).json({ 
+
+  res.status(err.status || 500).json({
     error: process.env.NODE_ENV === 'production' 
-      ? "Something went wrong!" 
+      ? "Internal server error" 
       : err.message,
     ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
   });
 });
 
-// ✅ Graceful shutdown handlers
-process.on('SIGTERM', () => {
-  console.log('👋 SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    console.log('✅ Process terminated');
-    process.exit(0);
-  });
+// ✅ Process error handlers
+process.on('uncaughtException', (error) => {
+  console.error('💥 Uncaught Exception:', error);
+  process.exit(1);
 });
 
-process.on('SIGINT', () => {
-  console.log('👋 SIGINT received, shutting down gracefully');
-  server.close(() => {
-    console.log('✅ Process terminated');
-    process.exit(0);
-  });
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });
 
-// ✅ Start server function
+// ✅ Graceful shutdown
+const gracefulShutdown = (signal) => {
+  console.log(`👋 ${signal} received, shutting down gracefully`);
+  if (global.server) {
+    global.server.close(() => {
+      console.log('✅ Process terminated');
+      process.exit(0);
+    });
+  } else {
+    process.exit(0);
+  }
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// ✅ Start server with comprehensive error handling
 const startServer = async () => {
   try {
-    // Connect to database first
+    console.log("🚀 Starting server initialization...");
+    
+    // Step 1: Connect to database with retries
     await connectDB();
     
-    // Start server on Render's dynamic port
+    // Step 2: Start server
     const PORT = process.env.PORT || 5000;
     const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`✅ Server is running on port: ${PORT}`);
+      console.log(`✅ Server running on port: ${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+      console.log(`📡 Service URL: https://rail-web-server.onrender.com`);
     });
 
-    // Handle server errors
+    // Step 3: Server error handling
     server.on('error', (error) => {
       console.error('❌ Server error:', error.message);
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use`);
+      }
       process.exit(1);
     });
 
-    // Make server available for graceful shutdown
+    // Step 4: Make server globally available
     global.server = server;
-    
+
+    // Step 5: Keep-alive (only in production)
+    if (process.env.NODE_ENV === 'production') {
+      setTimeout(() => {
+        console.log('🔄 Keep-alive service will start in 2 minutes');
+        setInterval(async () => {
+          try {
+            const response = await fetch('https://rail-web-server.onrender.com/health');
+            console.log(`🏓 Keep-alive: ${response.status}`);
+          } catch (error) {
+            console.log(`❌ Keep-alive failed: ${error.message}`);
+          }
+        }, 14 * 60 * 1000); // Every 14 minutes
+      }, 2 * 60 * 1000); // Start after 2 minutes
+    }
+
   } catch (error) {
-    console.error('❌ Failed to start server:', error.message);
+    console.error('💥 Failed to start server:', error.message);
     process.exit(1);
   }
 };
 
-// ✅ Start the application
+// ✅ Initialize application
 startServer();

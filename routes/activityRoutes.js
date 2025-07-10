@@ -5,6 +5,12 @@ const activityController = require('../controllers/ActivityController'); // Adju
 const userAuth = require('../middleware/UserAuth'); // Your authentication middleware
 
 // Route to get recent activities (Admin only)
-router.get('/activities/recent', userAuth, activityController.getRecentActivities);
+// Change from '/activities/recent' to just '/recent'
+router.get('/recent', userAuth, activityController.getRecentActivities);
+
+// Example: If you had a route to create an activity
+// router.post('/', userAuth, activityController.createActivity);
+// Example: If you had a route to get a specific activity by ID
+// router.get('/:id', userAuth, activityController.getActivityById);
 
 module.exports = router;

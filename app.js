@@ -1,3 +1,4 @@
+// app.js
 const express = require('express');
 const app = express();
 
@@ -33,13 +34,13 @@ const connectDB = async () => {
 };
 
 // Import routes with error handling
-let auth, user, divisionRouter, trainRouter, activityRouter; // <--- ADD activityRouter here
+let auth, user, divisionRouter, trainRouter, activityRouter;
 try {
     auth = require("./routes/authRoute.js");
     user = require("./routes/userRoute.js");
     divisionRouter = require('./routes/divisionRoute.js');
     trainRouter = require('./routes/trainRoute.js');
-    activityRouter = require('./routes/activityRoutes.js'); // <--- ADD THIS LINE to import new activity routes
+    activityRouter = require('./routes/activityRoutes.js'); // <--- Already here
     console.log("✅ All routes loaded successfully");
 } catch (error) {
     console.error("❌ Route loading failed:", error.message);
@@ -53,8 +54,6 @@ const corsOptions = {
         : '*',
     credentials: false,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    // Add 'division-id' back if you decide to use it, but it's not recommended for IDs
-    // For now, it's removed as we moved ID to URL params for DELETE.
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
     optionsSuccessStatus: 200
 };
@@ -73,11 +72,7 @@ app.use((req, res, next) => {
 // ✅ Enhanced health check with database test
 app.get("/health", async (req, res) => {
     try {
-        // Test database connection
-        // Note: `require("./conn/conn")` executes the connection logic.
-        // If it throws, the catch block will handle it.
-        // For a more direct health check, you might check mongoose.connection.readyState
-        const mongoose = require('mongoose'); // Ensure mongoose is imported if not already
+        const mongoose = require('mongoose');
         const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected";
 
         const healthInfo = {
@@ -88,12 +83,12 @@ app.get("/health", async (req, res) => {
                 rss: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB',
                 heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB'
             },
-            database: dbStatus, // Reflect actual connection status
+            database: dbStatus,
             environment: process.env.NODE_ENV || 'development'
         };
 
         if (dbStatus === "disconnected") {
-            res.status(503).json(healthInfo); // Service Unavailable if DB is down
+            res.status(503).json(healthInfo);
         } else {
             res.status(200).json(healthInfo);
         }
@@ -119,7 +114,7 @@ app.get("/", (req, res) => {
             user: "/api/user",
             division: "/api/division",
             coach: "/api/coach",
-            activities: "/api/activities" // <--- ADD THIS LINE for the new activities route
+            activities: "/api/activities" // <--- Already here
         },
         health: "/health"
     });
@@ -162,8 +157,8 @@ app.use("/api/coach", (req, res, next) => {
     }
 });
 
-// --- ADD NEW ACTIVITY ROUTE HERE ---
-app.use("/api", (req, res, next) => { // Using '/api' as the base for activities
+// --- UPDATED NEW ACTIVITY ROUTE HERE ---
+app.use("/api/activities", (req, res, next) => { // CHANGED BASE PATH TO '/api/activities'
     try {
         activityRouter(req, res, next);
     } catch (error) {
@@ -171,7 +166,7 @@ app.use("/api", (req, res, next) => { // Using '/api' as the base for activities
         res.status(500).json({ error: "Activity service error" });
     }
 });
-// --- END NEW ACTIVITY ROUTE ---
+// --- END UPDATED NEW ACTIVITY ROUTE ---
 
 
 // ✅ 404 handler

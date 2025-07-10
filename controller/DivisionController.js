@@ -65,7 +65,7 @@ module.exports.addDivision = async (req, res) => {
     }
 };
 
-// Delete division --admin
+// Delete division (which is a train) --admin
 module.exports.deleteDivision = async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
@@ -88,26 +88,34 @@ module.exports.deleteDivision = async (req, res) => {
             return res.status(403).json({ message: "You are not authorized to delete divisions" });
         }
 
-        const divisionId = req.headers["division-id"];
+        // --- IMPORTANT CHANGE HERE: Get ID from URL parameters ---
+        const { id } = req.params; // Expects ID like /api/division/delete-division/:id
+        // --- END IMPORTANT CHANGE ---
 
-        if (!divisionId || !mongoose.Types.ObjectId.isValid(divisionId)) {
-            return res.status(400).json({ message: "Invalid Division ID" });
+        if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "Invalid Division ID provided. Must be a valid MongoDB ObjectId." });
         }
 
-        const division = await Division.findById(divisionId);
+        const division = await Division.findById(id);
         if (!division) {
-            return res.status(404).json({ message: "Division not found" });
+            return res.status(404).json({ message: "Division (Train) not found." });
         }
 
-        await Division.findByIdAndDelete(divisionId);
+        await Division.findByIdAndDelete(id);
 
-        res.status(200).json({ message: "Division deleted successfully" });
+        res.status(200).json({ message: "Division (Train) deleted successfully." });
     } catch (error) {
         if (error.name === "JsonWebTokenError") {
             return res.status(401).json({ message: "Invalid token. Please log in again." });
         }
 
-        res.status(500).json({ message: error.message });
+        // Catch Mongoose cast errors specifically for invalid IDs if not caught by isValid
+        if (error.name === 'CastError' && error.path === '_id') {
+            return res.status(400).json({ message: "Invalid Division ID format." });
+        }
+
+        console.error("Error deleting division:", error); // Log the actual error for debugging
+        res.status(500).json({ message: "An error occurred while deleting the division (train).", error: error.message });
     }
 };
 

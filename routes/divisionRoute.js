@@ -8,7 +8,7 @@ const { addDivision, deleteDivision, getAllDivisions, getRecentlyAddedDivisions,
 const divisionRouter = express.Router();
 //Division routes
 divisionRouter.post('/add-division', addDivision, userAuth)//add division
-divisionRouter.post('/delete-division', userAuth, deleteDivision )//delete division
+divisionRouter.delete('/delete-division/:id', userAuth, deleteDivision);
 divisionRouter.get('/get-all-division', getAllDivisions )//fetch all division 
 divisionRouter.get('/recent-division', getRecentlyAddedDivisions) //recent division
 divisionRouter.get('/division-id/:id', getDivisionById)// get divisions

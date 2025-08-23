@@ -1,11 +1,6 @@
 const mongoose = require("mongoose");
 
 const trainSchema = new mongoose.Schema({
-    train_Number: {
-        type: String,
-        ref: "Division", // Reference to the Division schema
-        required: true,
-    },
     coach_uid: {
         type: String,
         required: [true, 'Coach UID is required'],
@@ -40,7 +35,7 @@ const trainSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Division",
     },
-    error: { 
+    error: {
         type: String,
         default: "000",
     },
@@ -59,43 +54,29 @@ const trainSchema = new mongoose.Schema({
 });
 
 // Add indexes for better query performance
-trainSchema.index({ train_Number: 1 });
 trainSchema.index({ coach_uid: 1 });
-trainSchema.index({ train_Number: 1, coach_uid: 1 }); // Compound index for queries filtering by both
+trainSchema.index({ division: 1 });
+trainSchema.index({ coach_uid: 1, division: 1 }); // Compound index
 
-// Pre-save middleware to validate that the coach_uid exists in the referenced Division
+// Pre-save middleware to validate that the coach_uid exists in Division and set division reference
 trainSchema.pre('save', async function(next) {
-    if (this.train_Number && this.coach_uid) {
+    if (this.coach_uid) {
         try {
             const Division = mongoose.model('Division');
             
-            // First check if the train number exists in Division
-            const trainExists = await Division.findOne({
-                train_Number: this.train_Number
-            });
-            
-            if (!trainExists) {
-                const error = new Error(`Train number ${this.train_Number} not found in Division schema. Please check again.`);
-                error.name = 'ValidationError';
-                return next(error);
-            }
-            
-            // Then check if the coach_uid exists under this train number
+            // Find the division that contains this coach_uid
             const division = await Division.findOne({
-                train_Number: this.train_Number,
                 'coach_uid.uid': this.coach_uid
             });
             
             if (!division) {
-                const error = new Error(`No UID ${this.coach_uid} found under train number ${this.train_Number}. Please check again.`);
+                const error = new Error(`Coach UID ${this.coach_uid} not found in any division. Please check again.`);
                 error.name = 'ValidationError';
                 return next(error);
             }
             
-            // Set the division ObjectId if not already set
-            if (!this.division) {
-                this.division = division._id;
-            }
+            // Set the division ObjectId
+            this.division = division._id;
         } catch (err) {
             return next(err);
         }
@@ -112,7 +93,23 @@ trainSchema.virtual('coach_name').get(function() {
     return null;
 });
 
-// Method to populate coach details
+// Virtual to get train number from Division
+trainSchema.virtual('train_Number').get(function() {
+    if (this.populated('division') && this.division) {
+        return this.division.train_Number;
+    }
+    return null;
+});
+
+// Virtual to get train name from Division
+trainSchema.virtual('train_Name').get(function() {
+    if (this.populated('division') && this.division) {
+        return this.division.train_Name;
+    }
+    return null;
+});
+
+// Method to populate coach details and division information
 trainSchema.methods.populateCoachDetails = function() {
     return this.populate({
         path: 'division',

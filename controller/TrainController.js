@@ -18,22 +18,22 @@ const sendChainStatusEmail = async (train) => {
             return;
         }
 
-        // Get coach name from division data
-        const division = await Division.findOne({ train_Number: train.train_Number });
-        const coach = division?.coach_uid.find(c => c.uid === train.coach_uid);
-        const coachName = coach ? coach.coach_name : train.coach_uid;
+        // Populate division data to get train and coach information
+        await train.populateCoachDetails();
+        const coachName = train.coach_name || train.coach_uid;
+        const trainNumber = train.train_Number || 'Unknown';
 
         for (const email of emails) {
             const mailOptions = {
                 from: process.env.SENDER_EMAIL,
                 to: email,
                 subject: "Chain Pulled Notification",
-                text: `Alert! The chain status of train "${train.train_Number}" (Coach: ${coachName}) has been updated to "Pulled". Please take necessary actions immediately.`,
+                text: `Alert! The chain status of train "${trainNumber}" (Coach: ${coachName}) has been updated to "Pulled". Please take necessary actions immediately.`,
             };
             const info = await transporter.sendMail(mailOptions);
         }
     } catch (error) {
-        await logActivity(`Chain Status Email: Error while sending notification for train ${train.train_Number}. Error: ${error.message}`, 'error');
+        await logActivity(`Chain Status Email: Error while sending notification for coach ${train.coach_uid}. Error: ${error.message}`, 'error');
         console.error("Error while sending chain status email:", error);
     }
 };
@@ -41,17 +41,16 @@ const sendChainStatusEmail = async (train) => {
 // Add data (Train Details)
 module.exports.addTrainDetails = async (req, res) => {
     try {
-        const { train_Number, coach_uid, chain_status, latitude, longitude, temperature, error, memory, humidity, date, time } = req.body;
+        const { coach_uid, chain_status, latitude, longitude, temperature, error, memory, humidity, date, time } = req.body;
 
         // Validate required fields
-        if (!train_Number || !coach_uid) {
-            await logActivity(`Add Train Details: Missing required fields - train_Number: ${train_Number}, coach_uid: ${coach_uid}`, 'warning');
-            return res.status(400).json({ message: "Train number and coach UID are required." });
+        if (!coach_uid) {
+            await logActivity(`Add Train Details: Missing required field - coach_uid: ${coach_uid}`, 'warning');
+            return res.status(400).json({ message: "Coach UID is required." });
         }
 
         // Create a new train entry (validation will be handled by the model's pre-save middleware)
         const newTrain = new Train({
-            train_Number,
             coach_uid,
             chain_status,
             latitude,
@@ -70,14 +69,15 @@ module.exports.addTrainDetails = async (req, res) => {
             // Populate division data to get coach name and other details
             await savedTrain.populateCoachDetails();
             
-            // Get coach name for alert
+            // Get coach name and train details for alert
             const coachName = savedTrain.coach_name || coach_uid;
+            const trainNumber = savedTrain.train_Number || 'Unknown';
             
             // This is the new, direct alert data, now with `createdAt`
             const alert = {
                 _id: savedTrain._id, // Add _id for key prop on frontend
-                train_Name: savedTrain.division?.train_Name || 'Unknown',
-                train_Number: savedTrain.train_Number,
+                train_Name: savedTrain.train_Name || 'Unknown',
+                train_Number: trainNumber,
                 coach_uid: savedTrain.coach_uid,
                 coach_name: coachName,
                 createdAt: savedTrain.createdAt, // Include the timestamp
@@ -93,11 +93,10 @@ module.exports.addTrainDetails = async (req, res) => {
                 alert: null // Initialize alert to null
             };
             
-            // Check if the chain was pulled AND if this is the first time for this train/coach_uid
+            // Check if the chain was pulled AND if this is the first time for this coach_uid
             if (savedTrain.chain_status === "pulled") {
-                // Find any previous "pulled" records for this specific train and coach_uid
+                // Find any previous "pulled" records for this specific coach_uid
                 const previousPull = await Train.findOne({ 
-                    train_Number, 
                     coach_uid,
                     chain_status: "pulled",
                     _id: { $ne: savedTrain._id } // Exclude the current record
@@ -108,10 +107,10 @@ module.exports.addTrainDetails = async (req, res) => {
                     await sendChainStatusEmail(savedTrain);
                     responseMessage.alert = alert; // Add the alert to the response
                     responseMessage.message = "Train details added and chain pull alert triggered!";
-                    await logActivity(`Chain pull alert triggered and email sent for Train: ${train_Number}, Coach UID: ${coach_uid}.`, 'success');
+                    await logActivity(`Chain pull alert triggered and email sent for Coach UID: ${coach_uid}.`, 'success');
                     
                     // Mark this alert as new for the polling endpoint
-                    const alertKey = `${train_Number}-${coach_uid}-${savedTrain._id}`;
+                    const alertKey = `${coach_uid}-${savedTrain._id}`;
                     // Don't add to sentAlerts here, let getActiveChainPulls handle it
                 } else {
                     // If a previous pull exists, still send the alert to the frontend, but don't re-send the email or log a new entry
@@ -119,7 +118,7 @@ module.exports.addTrainDetails = async (req, res) => {
                 }
             } else {
                 // Log for non-pulled status
-                await logActivity(`Added train details for Train: ${train_Number}, Coach UID: ${coach_uid}, Status: ${chain_status}.`, 'success');
+                await logActivity(`Added train details for Coach UID: ${coach_uid}, Status: ${chain_status}.`, 'success');
             }
             
             res.status(201).json(responseMessage);
@@ -140,21 +139,21 @@ module.exports.addTrainDetails = async (req, res) => {
     }
 };
 
-// Fetch train details by train_Number and coach_uid
+// Fetch train details by coach_uid
 module.exports.getTrainDetails = async (req, res) => {
     try {
-        const { train_Number, coach_uid } = req.query;
+        const { coach_uid } = req.query;
 
-        if (!train_Number || !coach_uid) {
-            await logActivity(`Get Train Details: Missing train number or coach UID in query.`, 'warning');
-            return res.status(400).json({ message: "Train number and coach UID are required." });
+        if (!coach_uid) {
+            await logActivity(`Get Train Details: Missing coach UID in query.`, 'warning');
+            return res.status(400).json({ message: "Coach UID is required." });
         }
 
-        const trains = await Train.find({ train_Number, coach_uid });
+        const trains = await Train.find({ coach_uid });
 
         if (trains.length === 0) {
-            await logActivity(`Get Train Details: No details found for Train: ${train_Number}, Coach UID: ${coach_uid}.`, 'info');
-            return res.status(404).json({ message: "Train details not found for the given train number and coach UID." });
+            await logActivity(`Get Train Details: No details found for Coach UID: ${coach_uid}.`, 'info');
+            return res.status(404).json({ message: "Train details not found for the given coach UID." });
         }
 
         // Populate coach details for each train
@@ -162,13 +161,13 @@ module.exports.getTrainDetails = async (req, res) => {
             trains.map(train => train.populateCoachDetails())
         );
 
-        await logActivity(`Fetched train details for Train: ${train_Number}, Coach UID: ${coach_uid}.`, 'info');
+        await logActivity(`Fetched train details for Coach UID: ${coach_uid}.`, 'info');
         res.status(200).json({
             message: "Train details fetched successfully!",
             train: populatedTrains
         });
     } catch (error) {
-        await logActivity(`Get Train Details: An error occurred for Train: ${req.query.train_Number}, Coach UID: ${req.query.coach_uid}. Error: ${error.message}`, 'error');
+        await logActivity(`Get Train Details: An error occurred for Coach UID: ${req.query.coach_uid}. Error: ${error.message}`, 'error');
         console.error("Error fetching train details:", error);
         res.status(500).json({
             message: "An error occurred while fetching train details",
@@ -209,8 +208,8 @@ module.exports.getAvailableCoaches = async (req, res) => {
             coach_name: coach.coach_name
         }));
 
-        // Optionally, you can also check which coaches have active train entries
-        const activeCoachUIDs = await Train.distinct('coach_uid', { train_Number: division.train_Number });
+        // Check which coaches have active train entries
+        const activeCoachUIDs = await Train.distinct('coach_uid', { division: division._id });
 
         const coachesWithStatus = availableCoaches.map(coach => ({
             ...coach,
@@ -239,7 +238,7 @@ module.exports.getAvailableCoaches = async (req, res) => {
 // Modified function to return only NEW chain pull alerts (one-time process)
 module.exports.getActiveChainPulls = async (req, res) => {
     try {
-        // Get the most recent entry for each train-coach_uid combination with pulled status
+        // Get the most recent entry for each coach_uid with pulled status
         const activeAlerts = await Train.aggregate([
             {
                 $match: { chain_status: "pulled" }
@@ -249,7 +248,7 @@ module.exports.getActiveChainPulls = async (req, res) => {
             },
             {
                 $group: {
-                    _id: { train_Number: "$train_Number", coach_uid: "$coach_uid" },
+                    _id: "$coach_uid",
                     latestRecord: { $first: "$$ROOT" }
                 }
             },
@@ -259,14 +258,15 @@ module.exports.getActiveChainPulls = async (req, res) => {
             {
                 $lookup: {
                     from: "divisions",
-                    localField: "train_Number",
-                    foreignField: "train_Number",
+                    localField: "division",
+                    foreignField: "_id",
                     as: "divisionData"
                 }
             },
             {
                 $addFields: {
                     train_Name: { $arrayElemAt: ["$divisionData.train_Name", 0] },
+                    train_Number: { $arrayElemAt: ["$divisionData.train_Number", 0] },
                     coach_name: {
                         $let: {
                             vars: {
@@ -302,7 +302,7 @@ module.exports.getActiveChainPulls = async (req, res) => {
 
         // Filter out alerts that have already been sent to frontend
         const newAlerts = activeAlerts.filter(alert => {
-            const alertKey = `${alert.train_Number}-${alert.coach_uid}-${alert._id}`;
+            const alertKey = `${alert.coach_uid}-${alert._id}`;
             if (!sentAlerts.has(alertKey)) {
                 sentAlerts.add(alertKey); // Mark as sent
                 return true;
